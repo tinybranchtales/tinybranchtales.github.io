@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TinyBranchTales - a small game studio. Site currently under maintenance.">
+    <title>TinyBranchTales</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="nerve-bg" aria-hidden="true">
+        <canvas id="nerve-canvas"></canvas>
+    </div>
+
+    <main class="content">
+        <section class="maintenance">
+            <h1>Tiny Branch Tales</h1>
+            <p class="status">We're currently under maintenance.</p>
+            <p class="status-detail">We'll be back soon. Thanks for your patience!</p>
+        </section>
+
+        <section class="contact">
+            <h2>Contact Us</h2>
+            <p>
+                Email us at
+                <a href="mailto:contact@tinybranchtales.com">contact@tinybranchtales.com</a>
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 TinyBranchTales. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('nerve-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const spacing = 200;
+        let width = 0;
+        let height = 0;
+        let cols = 0;
+        let rows = 0;
+        let nodes = [];
+
+        function buildNodes() {
+            cols = Math.ceil(width / spacing) + 2;
+            rows = Math.ceil(height / spacing) + 2;
+            nodes = [];
+            for (let c = 0; c < cols; c++) {
+                for (let r = 0; r < rows; r++) {
+                    const jitterX = (Math.random() - 0.5) * spacing * 0.6;
+                    const jitterY = (Math.random() - 0.5) * spacing * 0.6;
+                    const types = ['coin', 'star', 'heart'];
+                    nodes.push({
+                        x0: (c - 0.5) * spacing + jitterX,
+                        y0: (r - 0.5) * spacing + jitterY,
+                        phaseX: Math.random() * Math.PI * 2,
+                        phaseY: Math.random() * Math.PI * 2,
+                        type: types[Math.floor(Math.random() * types.length)],
+                    });
+                }
+            }
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            buildNodes();
+        }
+
+        function render(time) {
+            const xs = [];
+            const ys = [];
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                xs[i] = n.x0 + Math.sin(time * 0.45 + n.y0 * 0.014 + n.phaseX) * waveAmp;
+                ys[i] = n.y0 + Math.cos(time * 0.38 + n.x0 * 0.014 + n.phaseY) * waveAmp;
+            }
+
+            ctx.lineWidth = 1.4;
+            ctx.strokeStyle = 'rgba(94, 163, 255, 0.35)';
+            ctx.beginPath();
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const i = r * cols + c;
+                    const n = nodes[i];
+                    const x1 = xs[i];
+                    const y1 = ys[i];
+                    const links = [];
+                    if (c < cols - 1) links.push(i + 1);
+                    if (r < rows - 1) links.push(i + cols);
+                    for (let k = 0; k < links.length; k++) {
+                        const j = links[k];
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(xs[j], ys[j]);
+                    }
+                }
+            }
+            ctx.stroke();
+
+            for (let i = 0; i < nodes.length; i++) {
+                const r = 8 + Math.sin(time * 1.5 + nodes[i].phaseX) * 3;
+                const x = xs[i];
+                const y = ys[i];
+                if (nodes[i].type === 'coin') {
+                    drawCoin(x, y, r, time);
+                } else if (nodes[i].type === 'star') {
+                    drawStar(x, y, r, time);
+                } else {
+                    drawHeart(x, y, r);
+                }
+            }
+        }
+
+        function drawCoin(x, y, r, time) {
+            const sx = Math.abs(Math.cos(time * 2 + y * 0.01)) * 0.4 + 0.6;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(sx, 1);
+            ctx.fillStyle = '#ffd166';
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = r * 0.22;
+            ctx.strokeStyle = '#e8a83a';
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawStar(x, y, r, time) {
+            const pulse = 1 + Math.sin(time * 2 + x * 0.01) * 0.15;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(pulse, pulse);
+            ctx.fillStyle = '#ffe66d';
+            ctx.beginPath();
+            for (let k = 0; k < 10; k++) {
+                const rad = k % 2 === 0 ? r : r * 0.5;
+                const a = -Math.PI / 2 + (k * Math.PI) / 5;
+                const px = Math.cos(a) * rad;
+                const py = Math.sin(a) * rad;
+                if (k === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawHeart(x, y, r) {
+            const pattern = [
+                '0110110',
+                '1111111',
+                '1111111',
+                '0111110',
+                '0011100',
+                '0001000',
+            ];
+            const cell = r * 0.42;
+            ctx.fillStyle = '#ff6b6b';
+            for (let row = 0; row < pattern.length; row++) {
+                for (let col = 0; col < pattern[row].length; col++) {
+                    if (pattern[row][col] === '1') {
+                        ctx.fillRect(
+                            x + (col - 3) * cell,
+                            y + (row - 2.5) * cell,
+                            cell,
+                            cell
+                        );
+                    }
+                }
+            }
+        }
+
+        const waveAmp = spacing * 0.22;
+
+        function draw(t) {
+            const time = t / 1000;
+            ctx.clearRect(0, 0, width, height);
+            render(time);
+            requestAnimationFrame(draw);
+        }
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reducedMotion) {
+            resize();
+            render(0);
+        } else {
+            window.addEventListener('resize', resize);
+            resize();
+            requestAnimationFrame(draw);
+        }
+    </script>
+</body>
+</html>
